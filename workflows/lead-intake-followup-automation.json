@@ -1,0 +1,746 @@
+{
+  "name": "AI-Powered Lead Tracking and Automated Follow-Up System",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1xcJ6w3h5BP9iLzP9BNxuU7tK4jSPlm0sIrWgY1hi3nk",
+          "mode": "list",
+          "cachedResultName": "New Lead",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xcJ6w3h5BP9iLzP9BNxuU7tK4jSPlm0sIrWgY1hi3nk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xcJ6w3h5BP9iLzP9BNxuU7tK4jSPlm0sIrWgY1hi3nk/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -192
+      ],
+      "id": "f8ccfb05-736b-4b6c-a568-956eff62e6de",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "QIhEGugdqqSvjQdF",
+          "name": "Google Sheets Trigger account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c9523e01-9552-49b5-9a37-122892c77ea0",
+              "leftValue": "={{ $json.Processed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        96,
+        -192
+      ],
+      "id": "1a2c8777-babb-41e1-b4e7-a13dab5bb35e",
+      "name": "Only Unprocessed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.item.json;\n\nlet phone = String(j.Phone || '').replace(/[^\\d+]/g, '');\nif (phone.startsWith('0')) {\n  phone = '+92' + phone.slice(1);\n} else if (phone.startsWith('92')) {\n  phone = '+' + phone;\n} else if (!phone.startsWith('+')) {\n  phone = '+92' + phone;\n}\n\nconst name = String(j.Name || '').trim();\n\nreturn {\n  json: {\n    leadId: String(j.LeadID || '').trim(),\n    name: name || 'there',\n    firstName: name.split(' ')[0] || 'there',\n    email: String(j.Email || '').trim().toLowerCase(),\n    phone,\n    message: String(j.Message || '').trim(),\n    status: 'Pending',\n    createdAt: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -208
+      ],
+      "id": "789c1d7e-4681-417b-ba6d-f71dc967361b",
+      "name": "Normalize"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a friendly sales assistant for a digital services agency. Write a warm 3-sentence acknowledgement email body for a new lead. Reference their specific inquiry naturally. Do not include a subject line, greeting, or signature. Only the body paragraphs."
+            },
+            {
+              "content": "=Lead name: {{ $json.name }}\nTheir inquiry: {{ $json.message }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        512,
+        -208
+      ],
+      "id": "2f3e7577-3008-45f4-b362-e6332a810a79",
+      "name": "Write Reply",
+      "credentials": {
+        "openAiApi": {
+          "id": "EzHHYVeV2GsehlfW",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3ba9eb86-71ef-806b-b112-000bb67446d2",
+          "mode": "list",
+          "cachedResultName": "Database",
+          "cachedResultUrl": "https://app.notion.com/p/3ba9eb8671ef80acb4f4c677671aec51"
+        },
+        "title": "={{ $('Google Sheets Trigger').item.json.Name }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "LeadID|rich_text",
+              "textContent": "={{ $('Google Sheets Trigger').item.json.LeadID }}"
+            },
+            {
+              "key": "Email|email",
+              "emailValue": "={{ $('Google Sheets Trigger').item.json.Email }}"
+            },
+            {
+              "key": "Phone|phone_number",
+              "phoneValue": "={{ $('Normalize').item.json.phone }}"
+            },
+            {
+              "key": "Status|status",
+              "statusValue": "={{ $('Normalize').item.json.status }}"
+            },
+            {
+              "key": "CreatedAT|date",
+              "date": "={{ $('Normalize').item.json.createdAt }}",
+              "timezone": "Asia/Karachi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        864,
+        -208
+      ],
+      "id": "a0cf622e-4467-4986-9061-acfcc967a669",
+      "name": "Create a database page",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "nGJh2W5Sg5n25ITC",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=\t{{ $('Normalize').item.json.email }}",
+        "subject": "Thanks for reaching out!",
+        "message": "=Hi {{ $('Normalize').item.json.firstName }}, {{ $('Write Reply').item.json.output[0].content[0].text }}    Best regards, The Team",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        -208
+      ],
+      "id": "3c074d87-959d-453d-be81-437e3f9babd1",
+      "name": "Email Lead",
+      "webhookId": "8b8ed5ad-31bd-4558-a54a-0b96f97a3d0c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "exGBR1oaYGqAfl2N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U0B11VAPPPY",
+          "mode": "list",
+          "cachedResultName": "Aneesa Zakria (@aneesazakria21)"
+        },
+        "text": "=🔔 *New Lead*\n*Name:* {{ $('Normalize').item.json.name }}\n*Email:* {{ $('Normalize').item.json.email }}\n*Phone:* {{ $('Normalize').item.json.phone }}\n*Message:* {{ $('Normalize').item.json.message }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1248,
+        -208
+      ],
+      "id": "635abe25-3917-4d28-bb0a-1c16f268fa69",
+      "name": "Alert Team",
+      "webhookId": "c0c47d17-a637-4fb2-b64a-298c437a6269",
+      "credentials": {
+        "slackApi": {
+          "id": "sttgtEJV7DQLhWeX",
+          "name": "Slack account 9"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1xcJ6w3h5BP9iLzP9BNxuU7tK4jSPlm0sIrWgY1hi3nk",
+          "mode": "list",
+          "cachedResultName": "New Lead",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xcJ6w3h5BP9iLzP9BNxuU7tK4jSPlm0sIrWgY1hi3nk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xcJ6w3h5BP9iLzP9BNxuU7tK4jSPlm0sIrWgY1hi3nk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Normalize').item.json.email }}",
+            "LeadID": "={{ $('Normalize').item.json.leadId }}",
+            "Processed": "Yes",
+            "NotionPageId": "={{ $('Create a database page').item.json.id }}",
+            "SentAt": "={{ $now.toISO() }}",
+            "CreatedAt": "={{ $('Normalize').item.json.createdAt }}",
+            "row_number": 0,
+            "Phone": "={{ $('Normalize').item.json.phone }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "LeadID",
+              "displayName": "LeadID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Processed",
+              "displayName": "Processed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NotionPageId",
+              "displayName": "NotionPageId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SentAt",
+              "displayName": "SentAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CreatedAt",
+              "displayName": "CreatedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1440,
+        -208
+      ],
+      "id": "a482f984-810f-4091-86e2-c11d140f6edd",
+      "name": "Mark Processed",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p4shOwYfFJdFOxAy",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        144
+      ],
+      "id": "7146869e-15e6-43d7-b8ce-c90d1ace5ea3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3ba9eb86-71ef-806b-b112-000bb67446d2",
+          "mode": "list",
+          "cachedResultName": "Database",
+          "cachedResultUrl": "https://app.notion.com/p/3ba9eb8671ef80acb4f4c677671aec51"
+        },
+        "returnAll": true,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Status|status",
+              "condition": "equals",
+              "optionValue": "Pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        192,
+        144
+      ],
+      "id": "c3487129-8c61-4867-95bf-8624ddaf2ce3",
+      "name": "Get Pending Leads",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "nGJh2W5Sg5n25ITC",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const DAYS = 0; // TEMPORARY for testing — change to 3 before going live\n\nconst cutoff = Date.now() - DAYS * 24 * 60 * 60 * 1000;\n\nreturn items\n  .filter(item => {\n    const created = item.json.property_created_at?.start;\n    if (!created) return false;\n    return new Date(created).getTime() <= cutoff;\n  })\n  .map(item => ({\n    json: {\n      pageId: item.json.id,\n      name: item.json.name || 'there',\n      email: item.json.property_email || ''\n    }\n  }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        144
+      ],
+      "id": "29c3a13c-c9d2-4f19-b46c-f5bbc286e19f",
+      "name": "Older Than 3 Days"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "78ad6064-8c4a-4835-af96-1cc5b969a1e2",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        144
+      ],
+      "id": "8ba8eb66-7423-4946-a960-cddc8a8f7c74",
+      "name": "Has Email"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "Following up on your inquiry",
+        "emailType": "text",
+        "message": "=Hi {{ $json.name.split(' ')[0] }},  Just checking in on the inquiry you sent us a few days ago. We'd love to continue the conversation — are you free for a quick call this week?  Best regards, The Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        144
+      ],
+      "id": "f30416b1-7e6e-4945-8bde-f6e7104bc2cb",
+      "name": "Send Follow-Up",
+      "webhookId": "68bd5466-3858-4664-9815-bd5c0290023f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "exGBR1oaYGqAfl2N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Has Email').item.json.pageId }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Contacted"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        1280,
+        144
+      ],
+      "id": "9f204119-4aa7-4e40-87c1-5c7a8205aa00",
+      "name": "Mark Contacted",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "nGJh2W5Sg5n25ITC",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "**Lead Intake & Acknowledgment**",
+        "height": 288,
+        "width": 1776,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -144,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "170ca177-7211-4071-ae36-c6d9a8f2eaff",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "**3-Day Lead Follow-Up**",
+        "height": 272,
+        "width": 1600,
+        "color": "#ECD8F3"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -80,
+        64
+      ],
+      "typeVersion": 1,
+      "id": "565a6dbb-7eac-4300-be6b-e44cd9660a57",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Only Unprocessed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only Unprocessed": {
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize": {
+      "main": [
+        [
+          {
+            "node": "Write Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Reply": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a database page": {
+      "main": [
+        [
+          {
+            "node": "Email Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Lead": {
+      "main": [
+        [
+          {
+            "node": "Alert Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Team": {
+      "main": [
+        [
+          {
+            "node": "Mark Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Leads": {
+      "main": [
+        [
+          {
+            "node": "Older Than 3 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Older Than 3 Days": {
+      "main": [
+        [
+          {
+            "node": "Has Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Email": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-Up": {
+      "main": [
+        [
+          {
+            "node": "Mark Contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "bfbe5fc0-d7bf-4bb6-91d6-9f9b37356d62",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7031f0d4400fbf454f870661117a61f1739806f4735a1dc5b9f47a6d4e8a91bc"
+  },
+  "nodeGroups": [],
+  "id": "bE5mBPs7DXWW8hLN",
+  "tags": []
+}
